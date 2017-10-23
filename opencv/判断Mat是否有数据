@@ -1,0 +1,3 @@
+Mat img = imread(imgPath);
+if(img.empty()) return -1;
+if(!img.data) return -1;

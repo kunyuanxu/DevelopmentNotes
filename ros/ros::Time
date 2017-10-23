@@ -1,0 +1,20 @@
+ros中有ros::Time和ros::Duration,Time指一个具体的时间点，Duration指一段时间
+
+它们都有两种格式：int32 sec（以秒为单位）   ine32 nsec（以纳秒为单位）
+
+获得当前时间：  ros::Time begin = ros::Time::now();
+
+将当前Time或Duration转换为以秒为单位的数字
+double secs = ros::Time::now().toSec();
+ros::Duration d(0.5);
+secs = d.toSec();
+
+sleeping and rates
+ros::Duration(0.5).sleep();
+
+ros::Rate r(10);
+while(ros::ok())
+{
+.....do some work.....
+   r.sleep();
+}

@@ -1,0 +1,7 @@
+首先进入python
+$python
+>>>import python
+>>>for line in sys.path
+...    print line
+...    
+然后就可以看到所有python库的路径了 

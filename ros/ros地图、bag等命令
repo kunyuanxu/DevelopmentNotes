@@ -1,0 +1,24 @@
+保存ros已经生成的地图
+rosrun map_server map_saver -f ~/map/map_name
+
+slam建图过程中rviz可视化
+roslaunch cartographer_turtlebot visualization_rviz.launch
+
+rosbag包文件录制
+rosbag record -O filename.bag topic_names
+
+rosbag包文件回放
+rosbag play filename.bag
+
+roslaunch cartographer_ros turtlebot_kinect.launch 
+
+roslaunch cartographer_ros visualization_rviz.launch
+
+roslaunch turtlebot_teleop keyboard_teleop.launch
+
+rosbag record -O /imu /kinect2/qhd/camera_info /kinect2/qhd/image_depth_rect /points2 /odom /tf
+
+rosrun map_server map_saver -f ~/map/kinect_test
+
+rosbag record -O my_scan_data /scan /tf
+

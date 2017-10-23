@@ -1,0 +1,8 @@
+今天晚上编译了一晚上的caffe，碰到许多坑，记录下来以防再犯。
+
+主要问题：编译caffe+cuda+cudnn
+一般cuda7.0配cudnn4	cuda8.0配cudnn5
+
+编译参考博客：http://www.cnblogs.com/wangxiaocvpr/p/5385961.html
+
+这篇博客基本上把一整套编译流程说清楚了。

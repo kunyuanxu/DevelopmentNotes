@@ -1,0 +1,148 @@
+## http://www.cnblogs.com/xzd1575/p/5555523.html ##
+
+### content ###
+Ubuntu下多个版本OpenCV管理（Multiple Opencv version）
+
+背景：
+
+最近，在Nvidia的GPU嵌入式开发板Jetson TX1（简称TX1）上移植深度学习目标检测算法YOLO。在TX1上安装了官方提供的opencv版本——OpenCV4Tegra(OpenCV-2.4.12)，但是使用该版本opencv VideoCapture在读取摄像头数据时出错，显示错误：
+
+Unable to stop the stream.: Device or resource busy
+Unable to stop the stream.: Bad file descriptor
+
+使用Google试图找到解决方法，最后发现官方给出答案，只能重新安装Opencv3.0以上的 版本。我使用Nvidia论坛jkjung提供的方法安装OpenCV3.1.0。安装完成后，我使用的TX1 Ubuntu14.04上安装了两个版本的OpenCV, Opencv-2.4.12和Opencv-3.1.0。因此，我面临着如何在程序中指定使用期望版本的OpenCV，即Ubuntu下多个版本Opencv管理的问题。
+
+解决方案:
+
+现在讨论Ubuntu14.04下分别使用CMake和Makefile编译运行带Opencv程序的两种解决方案。
+
+1. CMake下指定Opencv版本
+
+关键文件：OpenCVConfig.cmake。在opencv编译好后，所在目录中一般会有一个叫OpenCVConfig.cmake的文件，这个文件中指定了CMake要去哪里找OpenCV，其.h文件在哪里等，比如其中一行：
+
+# Provide the include directories to the caller
+set(OpenCV_INCLUDE_DIRS "/home/ubuntu/src/opencv-3.1.0/build" "/home/ubuntu/src/opencv-3.1.0/include" "/home/ubuntu/src/opencv-3.1.0/include/opencv")
+
+只要让CMake找到这个文件，这个文件就指定了Opencv的所有路径，因此设置OpenCV_DIR为包含OpenCVConfig.cmake的目录，如在我的C++工程CMakeLists.txt中添加
+
+set(OpenCV_DIR "/home/ubuntu/src/opencv-3.1.0/build")
+
+我的OpenCVConfig.cmake在
+
+/home/ubuntu/src/opencv-3.1.0/build
+
+注意，将其添加在project(MyProjectName)之前。
+
+如CMakeLists.txt内容如下：
+
+cmake_minimum_required(VERSION 2.8)
+set(OpenCV_DIR "/home/ubuntu/src/opencv-3.1.0/build")
+project( camera )
+find_package( OpenCV REQUIRED )
+add_executable( camera camera.cpp )
+target_link_libraries( camera ${OpenCV_LIBS} )
+
+因此，我们期望使用哪个版本的Opencv，只要找到对应的OpenCVConfig.cmake文件，并且将其路径添加到工程的CMakeLists.txt中即可了。
+
+2. Makefile下指定Opencv版本
+
+关键文件：opencv.pc 。在Makefile下，应该是可以在其中详细设定Opencv路径，要使用到哪些库等等（我没有仔细学习过Makefile的使用）。在此，我想介绍一种简单的在Makefile下指定期望使用的Opencv版本的方法，该方法借助linux下pkg-config命令。
+
+我们常常使用pkg-config --modversion 来查看指定库的版本，比如查看opencv版本pkg-config --modversion opencv。其实pkg-config显示的信息来自于这个库对应的.pc文件，比如安装了opencv后，我们可以在/usr/lib/pkg-config/ 文件夹下找到opencv.pc，内容如下：
+复制代码
+
+# Package Information for pkg-config
+
+prefix=/usr
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir_old=${prefix}/include/opencv
+includedir_new=${prefix}/include
+
+Name: OpenCV
+Description: Open Source Computer Vision Library
+Version: 2.4.12.2
+Libs: -L${exec_prefix}/lib -lopencv_calib3d -lopencv_contrib -lopencv_core -lopencv_features2d -lopencv_flann -lopencv_gpu -lopencv_highgui -lopencv_imgproc -lopencv_legacy -lopencv_ml -lopencv_objdetect -lopencv_photo -lopencv_stitching -lopencv_superres -lopencv_ts -lopencv_video -lopencv_videostab -lopencv_detection_based_tracker -lopencv_esm_panorama -lopencv_facedetect -lopencv_imuvstab -lopencv_tegra -lopencv_vstab -L/usr/local/cuda-7.0/targets/armv7-linux-gnueabihf/lib -lcufft -lnpps -lnppi -lnppc -lcudart -ltbb -lrt -lpthread -lm -ldl
+Cflags: -I${includedir_old} -I${includedir_new}
+
+复制代码
+
+当然，我们也可以使用
+
+pkg-config --cflags opencv
+pkg-config --libs opencv
+
+分别查看opencv库的包含目录（include/, .h）和库名称（.so）。在Makefile中，可以通过以上命令设定opencv库相关目录。如下：
+
+COMMON+= -DOPENCV
+CFLAGS+= -DOPENCV
+LDFLAGS+= `pkg-config --libs opencv`
+COMMON+= `pkg-config --cflags opencv`
+
+此时Makefile对应的工程使用的opencv库即为opencv.pc文件中所指的版本。本例中为2.4.12.2。
+
+那么可以容易想到，如果我在/usr/lib/pkgconfig文件夹目录下添加opencv-3.1.0.pc文件，是否就可以将版本指向opencv-3.1.0l了呢？答案是肯定的。
+
+我在编译opencv-3.1.0的编译目录下/home/ubuntu/src/opencv-3.1.0/build/目录下找到了unix-install/opencv.pc文件，其内容如下：
+复制代码
+
+# Package Information for pkg-config
+
+prefix=/home/ubuntu/opencv-3.1.0
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir_old=${prefix}/include/opencv
+includedir_new=${prefix}/include
+
+Name: OpenCV
+Description: Open Source Computer Vision Library
+Version: 3.1.0
+Libs: -L${exec_prefix}/lib -lopencv_cudabgsegm -lopencv_cudaobjdetect -lopencv_cudastereo -lopencv_shape -lopencv_stitching -lopencv_cudafeatures2d -lopencv_superres -lopencv_cudacodec -lopencv_videostab -lopencv_cudaoptflow -lopencv_cudalegacy -lopencv_calib3d -lopencv_features2d -lopencv_objdetect -lopencv_highgui -lopencv_videoio -lopencv_photo -lopencv_imgcodecs -lopencv_cudawarping -lopencv_cudaimgproc -lopencv_cudafilters -lopencv_video -lopencv_ml -lopencv_imgproc -lopencv_flann -lopencv_cudaarithm -lopencv_core -lopencv_cudev
+
+复制代码
+
+我发现其中的路径是不太准确的，更正为：
+复制代码
+
+# Package Information for pkg-config
+
+prefix=/home/ubuntu/src/opencv-3.1.0
+exec_prefix=${prefix}/build
+libdir=${exec_prefix}/lib
+includedir_old=${prefix}/include/opencv
+includedir_new=${prefix}/include
+
+Name: OpenCV
+Description: Open Source Computer Vision Library
+Version: 3.1.0
+Libs: -L${exec_prefix}/lib -lopencv_cudabgsegm -lopencv_cudaobjdetect -lopencv_cudastereo -lopencv_shape -lopencv_stitching -lopencv_cudafeatures2d -lopencv_superres -lopencv_cudacodec -lopencv_videostab -lopencv_cudaoptflow -lopencv_cudalegacy -lopencv_calib3d -lopencv_features2d -lopencv_objdetect -lopencv_highgui -lopencv_videoio -lopencv_photo -lopencv_imgcodecs -lopencv_cudawarping -lopencv_cudaimgproc -lopencv_cudafilters -lopencv_video -lopencv_ml -lopencv_imgproc -lopencv_flann -lopencv_cudaarithm -lopencv_core -lopencv_cudev
+
+复制代码
+
+并将其拷贝到/usr/lib/pkgconfig目录下，并重命名为opencv-3.1.0.pc，将原来的opencv.pc重命名为opencv-2.4.12.pc。
+
+那么当我期望使用opencv-3.1.0时，Makefile中为：
+
+COMMON+= -DOPENCV
+CFLAGS+= -DOPENCV
+LDFLAGS+= `pkg-config --libs opencv-3.1.0`
+COMMON+= `pkg-config --cflags opencv-3.1.0`
+
+当我期望使用opencv-2.4.12时，Makefile中为：
+
+COMMON+= -DOPENCV
+CFLAGS+= -DOPENCV
+LDFLAGS+= `pkg-config --libs opencv-2.4.12`
+COMMON+= `pkg-config --cflags opencv-2.4.12`
+
+从而实现了多个版本OpenCV的使用。
+
+备注：
+
+运行make之后，运行可执行程序时，可能会提示找不到库的错误（not find libopencv-core.so.3.1之类），那时因为动态库目录不在程序搜索库目录的路径下，系统默认的动态库搜索路径有/usr/local/lib等，OpenCV4Tegra(opencv-2.4.12)生成的库都在/usr/local/lib目录，但opencv-3.1.0的库在/home/ubuntu/src/opencv-3.1.0/build/lib中，不在搜索路径中，因此，只需要添加其为搜索路径即可。添加方法为/etc/ld.so.conf.d/libc.conf中添加/home/ubuntu/src/opencv-3.1.0/build/lib。libc.conf文件内容如下：
+
+# libc default configuration
+/usr/local/lib
+/home/ubuntu/src/opencv-3.1.0/build/lib
+
+

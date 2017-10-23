@@ -1,0 +1,3 @@
+$ mkdir -p ~/map
+$ rosrun map_server map_saver -f ~/map/lidar_2d_carto
+$ ls ~/map   #查看内容，包含lidar_2d_carto.pgm  lidar_2d_carto.yaml

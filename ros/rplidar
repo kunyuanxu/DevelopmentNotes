@@ -1,0 +1,1 @@
+sudo insmod /lib/modules/3.10.67-g458d45kernel/drivers/usb/serial/cp210x.ko
